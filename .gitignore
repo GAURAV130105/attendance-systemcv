@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Models — large binary files, auto-downloaded on first run
+models/
+
+# Trained encodings — generated at runtime
+encodings/
+
+# Per-student face photos — sensitive personal data
+known_faces/
+
+# Attendance Excel outputs — generated at runtime
+attendance_records/
+
+# Environment / IDE
+.env
+.venv/
+venv/
+.vscode/
+.idea/
+
+# OS artefacts
+.DS_Store
+Thumbs.db
