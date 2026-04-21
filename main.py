@@ -639,9 +639,18 @@ class AttendanceApp:
                         )
                         if newly_marked:
                             self.root.after(0, self._update_attendance_list)
+                            # Immediately flush the attendance record to the
+                            # Excel file in a background thread so the
+                            # Streamlit dashboard reflects this mark within
+                            # seconds (rather than waiting up to 60 s for the
+                            # auto-save loop to fire).
+                            _logger = self.logger
+                            threading.Thread(
+                                target=_logger.save, daemon=True
+                            ).start()
                             # Show attendance-history popup — pass today's date
-                            # so the popup shows the student as PRESENT immediately
-                            # (before the 60-second autosave flushes to Excel).
+                            # so the popup shows the student as PRESENT
+                            # immediately (in-memory mark visible right away).
                             _name      = result["name"]
                             _roll_no   = result["roll_no"]
                             _mark_date = self.logger.date_str   # live property

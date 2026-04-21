@@ -29,13 +29,12 @@ YOLO_MODEL_URL = (
 )
 
 # ── Face recognition settings (LBPH) ───────────────────────────
-# LBPH distance below this value = accepted identity match.
-# Lowered to 65 to prevent cross-student false positives:
-#   - 90 was too loose (first bug fix)
-#   - 75 still allowed 9% confidence ghost marks
-#   - 65 demands a significantly closer feature match
-# If your own face stops being recognised, raise to 70 then 75.
-LBPH_THRESHOLD        = 65   # Lower = stricter (50-100 range for ≤20 students)
+# LBPH_THRESHOLD = maximum allowed distance for a face to be accepted.
+# Set to 80 so real matches under varied lighting pass, while still
+# being well below 90 which allowed ghost-marks.
+# The combined MIN_ATTENDANCE_CONFIDENCE gate (below) does the fine
+# filtering — blocking any match below 20% confidence.
+LBPH_THRESHOLD        = 80   # Lower = stricter (50-100 range for ≤20 students)
 NUM_ENROLLMENT_PHOTOS = 5    # Raw captures per student
 # Each raw capture is augmented to N training samples automatically
 # Raised from 12 → 20 to include gamma/contrast variants that improve
@@ -46,18 +45,18 @@ AUGMENT_SAMPLES_PER_PHOTO = 20   # flip + brightness + gamma + contrast variants
 # A name is only "confirmed" once it wins VOTE_THRESHOLD fraction
 # of the last VOTE_FRAMES worker frames for that face position.
 #
-# VOTE_FRAMES=8  — rolling window; with ~15 fps worker this is ~0.5 s
-# VOTE_THRESHOLD=0.70 — 70% = at least 6 of 8 consecutive frames must
-#   agree on the same student before any attendance is marked.
-#   This makes a 1-2 frame mis-identification completely harmless.
+# VOTE_FRAMES=5  — ~0.3 s window at 15 fps (fast enough for real-time)
+# VOTE_THRESHOLD=0.65 — 65% = at least 4 of 5 frames must agree.
+#   Eliminates 1-frame jitter without slowing recognition.
 #
 # MIN_ATTENDANCE_CONFIDENCE — hard floor on the LBPH confidence score
-#   (0-1 scale, 1 = perfect match).  Faces with < 35% confidence are
-#   never marked present, even if the vote system agrees on a name.
-#   This blocks the ghost-mark seen at 9% confidence.
-VOTE_FRAMES               = 8     # Rolling window (was 3)
-VOTE_THRESHOLD            = 0.70  # 70% agreement required (was 0.55)
-MIN_ATTENDANCE_CONFIDENCE = 0.35  # Minimum LBPH confidence to mark present
+#   (0-1 scale, 1 = perfect match).  Faces with < 20% confidence are
+#   never marked present even if the vote agrees.
+#   With LBPH_THRESHOLD=80: blocks any match with distance > 64
+#   (the 9% ghost had distance ~73 — blocked; real matches score 30-80%).
+VOTE_FRAMES               = 5     # Rolling window size
+VOTE_THRESHOLD            = 0.65  # 65% agreement required
+MIN_ATTENDANCE_CONFIDENCE = 0.20  # Minimum LBPH confidence to mark present
 
 # ── Camera settings ────────────────────────────────────────────
 CAMERA_INDEX = 0   # Default webcam
