@@ -29,10 +29,12 @@ YOLO_MODEL_URL = (
 )
 
 # ── Face recognition settings (LBPH) ───────────────────────────
-# Raised from 75 → 90 so recognition still works under different
-# lighting conditions (e.g. morning enrolled, evening attending).
-# If you get too many false matches, lower back towards 75.
-LBPH_THRESHOLD        = 90   # Lower = stricter (50-100 range for ≤20 students)
+# Threshold of 75 balances lighting robustness against false matches.
+# 90 was too permissive: when only one student was present, the LBPH
+# model could loosely match another enrolled student's label, causing
+# phantom attendance marks. 75 keeps real recognition working while
+# blocking cross-student false positives.
+LBPH_THRESHOLD        = 75   # Lower = stricter (50-100 range for ≤20 students)
 NUM_ENROLLMENT_PHOTOS = 5    # Raw captures per student
 # Each raw capture is augmented to N training samples automatically
 # Raised from 12 → 20 to include gamma/contrast variants that improve

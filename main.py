@@ -620,10 +620,18 @@ class AttendanceApp:
             # Mark attendance for newly recognised faces
             # Guard: only process list-of-dicts results (attendance mode),
             # not list-of-tuples (enroll mode bboxes), to prevent false marks.
+            # IMPORTANT: also require result["confirmed"] == True so that only
+            # faces that have passed the vote-smoothing threshold are marked.
+            # Without this guard, any non-Unknown name (including "SCANNING...")
+            # would trigger a mark_present() call, causing enrolled-but-absent
+            # students to be falsely recorded as present.
             if (self.current_mode == "attendance" and self.logger
                     and results and isinstance(results[0], dict)):
                 for result in results:
-                    if result.get("name", "Unknown") != "Unknown":
+                    if (
+                        result.get("confirmed", False)          # vote threshold met
+                        and result.get("name", "Unknown") not in ("Unknown", "SCANNING...")
+                    ):
                         newly_marked = self.logger.mark_present(
                             result["name"], result["roll_no"]
                         )
