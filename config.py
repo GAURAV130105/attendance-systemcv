@@ -29,12 +29,13 @@ YOLO_MODEL_URL = (
 )
 
 # ── Face recognition settings (LBPH) ───────────────────────────
-# Threshold of 75 balances lighting robustness against false matches.
-# 90 was too permissive: when only one student was present, the LBPH
-# model could loosely match another enrolled student's label, causing
-# phantom attendance marks. 75 keeps real recognition working while
-# blocking cross-student false positives.
-LBPH_THRESHOLD        = 75   # Lower = stricter (50-100 range for ≤20 students)
+# LBPH distance below this value = accepted identity match.
+# Lowered to 65 to prevent cross-student false positives:
+#   - 90 was too loose (first bug fix)
+#   - 75 still allowed 9% confidence ghost marks
+#   - 65 demands a significantly closer feature match
+# If your own face stops being recognised, raise to 70 then 75.
+LBPH_THRESHOLD        = 65   # Lower = stricter (50-100 range for ≤20 students)
 NUM_ENROLLMENT_PHOTOS = 5    # Raw captures per student
 # Each raw capture is augmented to N training samples automatically
 # Raised from 12 → 20 to include gamma/contrast variants that improve
@@ -44,10 +45,19 @@ AUGMENT_SAMPLES_PER_PHOTO = 20   # flip + brightness + gamma + contrast variants
 # ── Recognition voting (smooths per-frame jitter) ───────────────
 # A name is only "confirmed" once it wins VOTE_THRESHOLD fraction
 # of the last VOTE_FRAMES worker frames for that face position.
-# VOTE_FRAMES=3 → green box appears faster (locks in within ~0.1 s).
-# VOTE_THRESHOLD=0.55 → tolerates 1 bad frame in 3 without dropping lock.
-VOTE_FRAMES    = 3    # Rolling window size (was 5)
-VOTE_THRESHOLD = 0.55 # 55 % of frames must agree (was 0.60)
+#
+# VOTE_FRAMES=8  — rolling window; with ~15 fps worker this is ~0.5 s
+# VOTE_THRESHOLD=0.70 — 70% = at least 6 of 8 consecutive frames must
+#   agree on the same student before any attendance is marked.
+#   This makes a 1-2 frame mis-identification completely harmless.
+#
+# MIN_ATTENDANCE_CONFIDENCE — hard floor on the LBPH confidence score
+#   (0-1 scale, 1 = perfect match).  Faces with < 35% confidence are
+#   never marked present, even if the vote system agrees on a name.
+#   This blocks the ghost-mark seen at 9% confidence.
+VOTE_FRAMES               = 8     # Rolling window (was 3)
+VOTE_THRESHOLD            = 0.70  # 70% agreement required (was 0.55)
+MIN_ATTENDANCE_CONFIDENCE = 0.35  # Minimum LBPH confidence to mark present
 
 # ── Camera settings ────────────────────────────────────────────
 CAMERA_INDEX = 0   # Default webcam

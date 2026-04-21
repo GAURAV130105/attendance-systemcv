@@ -27,7 +27,7 @@ from config import (
     BG_COLOR, FG_COLOR, ACCENT_COLOR, BUTTON_COLOR,
     SUCCESS_COLOR, WARNING_COLOR, COLOR_RECOGNIZED_HEX,
     COLOR_UNKNOWN_HEX, CAMERA_INDEX, NUM_ENROLLMENT_PHOTOS,
-    SHOW_FPS_COUNTER
+    SHOW_FPS_COUNTER, MIN_ATTENDANCE_CONFIDENCE
 )
 from face_encoder import (
     enroll_from_gui, save_enrollment, load_all_encodings,
@@ -617,20 +617,22 @@ class AttendanceApp:
         if cached is not None:
             imgtk, results = cached
 
-            # Mark attendance for newly recognised faces
-            # Guard: only process list-of-dicts results (attendance mode),
-            # not list-of-tuples (enroll mode bboxes), to prevent false marks.
-            # IMPORTANT: also require result["confirmed"] == True so that only
-            # faces that have passed the vote-smoothing threshold are marked.
-            # Without this guard, any non-Unknown name (including "SCANNING...")
-            # would trigger a mark_present() call, causing enrolled-but-absent
-            # students to be falsely recorded as present.
+            # Mark attendance for newly recognised faces.
+            # Three independent guards must ALL pass before attendance is marked:
+            #  1. result["confirmed"] — vote window reached VOTE_THRESHOLD agreement
+            #  2. name is a real enrolled student (not Unknown / SCANNING...)
+            #  3. confidence >= MIN_ATTENDANCE_CONFIDENCE (hard floor at 35%)
+            #
+            # Guard 3 was the key missing piece: the screenshot showed a 9%
+            # confidence match for an absent student still triggering mark_present()
+            # because guards 1 & 2 passed on a brief vote-window anomaly.
             if (self.current_mode == "attendance" and self.logger
                     and results and isinstance(results[0], dict)):
                 for result in results:
                     if (
-                        result.get("confirmed", False)          # vote threshold met
-                        and result.get("name", "Unknown") not in ("Unknown", "SCANNING...")
+                        result.get("confirmed", False)                          # gate 1
+                        and result.get("name", "Unknown") not in ("Unknown", "SCANNING...")  # gate 2
+                        and result.get("confidence", 0.0) >= MIN_ATTENDANCE_CONFIDENCE       # gate 3
                     ):
                         newly_marked = self.logger.mark_present(
                             result["name"], result["roll_no"]
@@ -640,8 +642,8 @@ class AttendanceApp:
                             # Show attendance-history popup — pass today's date
                             # so the popup shows the student as PRESENT immediately
                             # (before the 60-second autosave flushes to Excel).
-                            _name     = result["name"]
-                            _roll_no  = result["roll_no"]
+                            _name      = result["name"]
+                            _roll_no   = result["roll_no"]
                             _mark_date = self.logger.date_str   # live property
                             self.root.after(
                                 200,

@@ -4,11 +4,13 @@ Smart Attendance System — Streamlit Admin Dashboard
 Run with:  streamlit run dashboard.py
 
 Pages:
-  📊 Overview       — today's stats + KPI cards
-  📅 Daily Report   — attendance for any chosen date
-  👤 Student Detail — per-student history & charts
-  📋 Full Records   — searchable/filterable full table
-  📥 Export         — download filtered Excel / CSV
+  📊 Overview          — today's stats + KPI cards
+  📅 Daily Report      — attendance for any chosen date
+  👤 Student Detail    — per-student history & charts
+  📋 Full Records      — searchable/filterable full table
+  📥 Export            — download filtered Excel / CSV
+  🗑️ Delete Attendance — remove attendance records by date
+  ⚙️ Manage Students   — delete / rename enrolled students
 """
 
 import os
@@ -114,6 +116,15 @@ st.markdown("""
     border-bottom: 2px solid rgba(0,200,83,0.4);
 }
 
+/* ── Delete-attendance danger card ─────────────────────────────── */
+.danger-card {
+    background: rgba(255,23,68,0.08);
+    border: 1px solid rgba(255,23,68,0.30);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 1rem;
+}
+
 /* ── Badge pills ────────────────────────────────────────────────── */
 .badge-present {
     background: rgba(0,200,83,0.18);
@@ -171,6 +182,53 @@ hr { border-color: rgba(255,255,255,0.08) !important; }
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+def _delete_attendance_records(target_date: date, student_names: list[str]) -> tuple[bool, str, int]:
+    """
+    Delete attendance rows from the Excel file for the given date and
+    student name(s).  If student_names is empty, all rows for that date
+    are removed (wipe entire day).
+
+    Returns (success, message, rows_deleted).
+    """
+    if not os.path.exists(ATTENDANCE_FILE):
+        return False, "Attendance file not found.", 0
+
+    target_str = str(target_date)
+    try:
+        wb = load_workbook(ATTENDANCE_FILE)
+        ws = wb.active
+
+        rows_to_delete = []
+        for row in ws.iter_rows(min_row=2):
+            row_date = str(row[3].value).strip() if row[3].value else ""
+            row_name = str(row[2].value).strip() if row[2].value else ""
+
+            date_matches = (row_date == target_str)
+            name_matches = (
+                not student_names  # empty = delete whole day
+                or any(row_name.lower() == n.lower() for n in student_names)
+            )
+            if date_matches and name_matches:
+                rows_to_delete.append(row[0].row)
+
+        if not rows_to_delete:
+            return False, f"No matching records found for {target_date}.", 0
+
+        # Delete in reverse order to preserve row indices
+        for r in sorted(rows_to_delete, reverse=True):
+            ws.delete_rows(r)
+
+        # Re-number S.No column
+        for idx, row in enumerate(ws.iter_rows(min_row=2), start=1):
+            row[0].value = idx
+
+        wb.save(ATTENDANCE_FILE)
+        wb.close()
+        return True, f"Deleted {len(rows_to_delete)} record(s) for {target_date}.", len(rows_to_delete)
+    except Exception as e:
+        return False, f"Failed to delete records: {e}", 0
+
+
 def _rename_student(old_name: str, old_roll: str, new_name: str, new_roll: str) -> tuple[bool, str]:
     """
     Rename a student in:
@@ -219,9 +277,9 @@ def _rename_student(old_name: str, old_roll: str, new_name: str, new_roll: str) 
             ws = wb.active
             for row in ws.iter_rows(min_row=2):
                 if row[2].value and str(row[2].value).strip().lower() == old_name.lower():
-                    row[2].value = new_name          # Student Name column
+                    row[2].value = new_name
                 if row[1].value and str(row[1].value).strip().lower() == old_roll.lower():
-                    row[1].value = new_roll          # Roll No column
+                    row[1].value = new_roll
             wb.save(ATTENDANCE_FILE)
             wb.close()
         except Exception as e:
@@ -249,14 +307,12 @@ def _delete_student_dashboard(name: str, purge_attendance: bool = True) -> tuple
             from openpyxl import load_workbook as _lw
             wb = _lw(ATTENDANCE_FILE)
             ws = wb.active
-            # Collect row indices to delete (iterate in reverse to avoid index shift)
             rows_to_delete = [
                 row[0].row for row in ws.iter_rows(min_row=2)
                 if row[2].value and str(row[2].value).strip().lower() == name.lower()
             ]
             for r in sorted(rows_to_delete, reverse=True):
                 ws.delete_rows(r)
-            # Re-number S.No column after deletion
             for idx, row in enumerate(ws.iter_rows(min_row=2), start=1):
                 row[0].value = idx
             wb.save(ATTENDANCE_FILE)
@@ -269,9 +325,14 @@ def _delete_student_dashboard(name: str, purge_attendance: bool = True) -> tuple
 
     return True, f"'{name}' deleted and model retrained.{purge_note}"
 
+
 @st.cache_data(ttl=30)          # refresh every 30 seconds
 def load_attendance_df() -> pd.DataFrame:
-    """Load the master attendance Excel into a tidy DataFrame."""
+    """
+    Load the master attendance Excel into a tidy DataFrame.
+    This is the single source of truth — the dashboard always reads
+    straight from the same file that main.py writes to.
+    """
     if not os.path.exists(ATTENDANCE_FILE):
         return pd.DataFrame(columns=["S.No", "Roll No", "Student Name", "Date", "Time", "Status"])
     try:
@@ -341,8 +402,15 @@ with st.sidebar:
 
     page = st.radio(
         "Navigate",
-        ["📊 Overview", "📅 Daily Report", "👤 Student Detail",
-         "📋 Full Records", "📥 Export", "⚙️ Manage Students"],
+        [
+            "📊 Overview",
+            "📅 Daily Report",
+            "👤 Student Detail",
+            "📋 Full Records",
+            "📥 Export",
+            "🗑️ Delete Attendance",
+            "⚙️ Manage Students",
+        ],
         label_visibility="collapsed",
     )
 
@@ -729,7 +797,6 @@ elif page == "👤 Student Detail":
                                    for d in all_session_dates],
                     })
                     cal_df["Date_dt"] = pd.to_datetime(cal_df["Date"])
-                    # Week-based heatmap-style bar chart
                     fig_cal = px.bar(
                         cal_df,
                         x="Date",
@@ -861,7 +928,6 @@ elif page == "📥 Export":
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine="openpyxl") as writer:
                 export_df.to_excel(writer, index=False, sheet_name="Attendance")
-                # Summary sheet
                 if enrolled:
                     stats_df = get_student_stats(df_all, enrolled)
                     stats_df.to_excel(writer, index=False, sheet_name="Summary")
@@ -904,6 +970,169 @@ elif page == "📥 Export":
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  PAGE: DELETE ATTENDANCE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+elif page == "🗑️ Delete Attendance":
+    st.markdown("<h1 style='color:#fff;margin-bottom:0'>🗑️ Delete Attendance Records</h1>", unsafe_allow_html=True)
+    st.markdown(
+        "<p style='color:#8888aa'>Remove incorrect or erroneous attendance entries "
+        "for any date. Changes are written directly to the Excel file.</p>",
+        unsafe_allow_html=True,
+    )
+
+    if df_all.empty:
+        st.info("No attendance records exist yet.")
+    else:
+        # ── Step 1: Pick a date ───────────────────────────────────────────────
+        st.markdown("<div class='section-title'>📅 Step 1 — Choose a Date</div>", unsafe_allow_html=True)
+
+        # Build selectable dates: today + all past dates that have records
+        record_dates = sorted(df_all["Date"].dropna().unique(), reverse=True)
+        date_options_del = [str(d) for d in record_dates]
+
+        if not date_options_del:
+            st.info("No dated records found in the file.")
+            st.stop()
+
+        selected_del_date_str = st.selectbox(
+            "Select date to manage",
+            date_options_del,
+            help="Dates that have at least one attendance record are listed here.",
+        )
+        selected_del_date = date.fromisoformat(selected_del_date_str)
+
+        # Show records for that date
+        df_sel_day = df_all[df_all["Date"] == selected_del_date].copy()
+
+        st.markdown(f"<br>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='section-title'>📋 Records on {selected_del_date_str} "
+            f"<span style='color:#8888aa;font-size:0.85rem'>({len(df_sel_day)} record(s))</span></div>",
+            unsafe_allow_html=True,
+        )
+
+        if df_sel_day.empty:
+            st.info(f"No records found for {selected_del_date_str}.")
+            st.stop()
+
+        # Display the day's records (read from Excel — always in sync)
+        display_cols = ["Roll No", "Student Name", "Time", "Status"]
+        st.dataframe(
+            df_sel_day[display_cols].reset_index(drop=True),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        st.divider()
+
+        # ── Step 2: Select scope ───────────────────────────────────────────────
+        st.markdown("<div class='section-title'>🎯 Step 2 — Select Scope</div>", unsafe_allow_html=True)
+
+        delete_mode = st.radio(
+            "What do you want to delete?",
+            [
+                "🗑️ Delete attendance for specific student(s) on this date",
+                "💣 Delete ALL attendance records for this entire date",
+            ],
+            key="del_att_mode",
+        )
+
+        students_to_delete: list[str] = []
+
+        if "specific student" in delete_mode:
+            present_on_day = sorted(df_sel_day["Student Name"].unique().tolist())
+            students_to_delete = st.multiselect(
+                "Select student(s) whose attendance to remove",
+                present_on_day,
+                help="Only students marked present on the selected date are shown.",
+            )
+            if not students_to_delete:
+                st.info("Select at least one student to continue.")
+
+        else:
+            st.markdown(
+                "<div class='danger-card'>⚠️ <b>Warning:</b> This will remove <b>all</b> "
+                f"attendance entries for <b>{selected_del_date_str}</b> from the Excel file. "
+                "This cannot be undone.</div>",
+                unsafe_allow_html=True,
+            )
+
+        # ── Step 3: Confirm & Execute ─────────────────────────────────────────
+        can_proceed = (
+            ("specific student" in delete_mode and len(students_to_delete) > 0)
+            or ("entire date" in delete_mode)
+        )
+
+        if can_proceed:
+            st.markdown("<div class='section-title'>✅ Step 3 — Confirm Deletion</div>", unsafe_allow_html=True)
+
+            # Build a human-readable summary of what will be deleted
+            if "specific student" in delete_mode:
+                scope_desc = f"**{', '.join(students_to_delete)}** on **{selected_del_date_str}**"
+            else:
+                scope_desc = f"**all {len(df_sel_day)} records** on **{selected_del_date_str}**"
+
+            st.warning(f"⚠️ You are about to permanently delete {scope_desc} from the attendance file.")
+
+            col_confirm, col_btn = st.columns([2, 1])
+            with col_confirm:
+                confirmed_del_att = st.checkbox(
+                    "I understand this is permanent and cannot be undone",
+                    key="del_att_confirm",
+                )
+            with col_btn:
+                do_delete = st.button(
+                    "🗑️ Confirm Delete",
+                    key="del_att_btn",
+                    disabled=not confirmed_del_att,
+                    type="primary",
+                )
+
+            if do_delete and confirmed_del_att:
+                names_arg = students_to_delete if "specific student" in delete_mode else []
+                with st.spinner("Deleting records from Excel file…"):
+                    ok, msg, count = _delete_attendance_records(selected_del_date, names_arg)
+
+                if ok:
+                    st.success(f"✅ {msg}")
+                    st.cache_data.clear()   # force fresh reload from Excel
+                    st.rerun()
+                else:
+                    st.error(f"❌ {msg}")
+
+        # ── Live preview of remaining records ─────────────────────────────────
+        if enrolled and not df_sel_day.empty:
+            st.divider()
+            st.markdown(
+                "<div class='section-title'>📊 Full Class Status for This Date</div>",
+                unsafe_allow_html=True,
+            )
+            present_names_day = set(df_sel_day["Student Name"].str.lower())
+            class_rows = []
+            for s in enrolled:
+                is_p = s["name"].lower() in present_names_day
+                match = df_sel_day[df_sel_day["Student Name"].str.lower() == s["name"].lower()]
+                t = match["Time"].values[0] if not match.empty else "—"
+                class_rows.append({
+                    "Roll No":      s["roll_no"],
+                    "Student Name": s["name"],
+                    "Status":       "✅ Present" if is_p else "❌ Absent",
+                    "Check-in Time": t,
+                })
+            class_df = pd.DataFrame(class_rows)
+            st.dataframe(
+                class_df.style.map(
+                    lambda v: "color:#00C853;font-weight:600" if "Present" in str(v)
+                              else ("color:#FF1744;font-weight:600" if "Absent" in str(v) else ""),
+                    subset=["Status"],
+                ),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  PAGE: MANAGE STUDENTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -940,7 +1169,7 @@ elif page == "⚙️ Manage Students":
             st.markdown("<div class='section-title'>🗑️ Delete Student</div>", unsafe_allow_html=True)
             st.markdown(
                 "<small style='color:#FF6D00'>⚠️ This permanently removes the student's face data "
-                "and retrains the model. Attendance history is kept.</small>",
+                "and retrains the model. Attendance history is kept unless you choose to purge it.</small>",
                 unsafe_allow_html=True,
             )
             st.markdown("<br>", unsafe_allow_html=True)
@@ -951,16 +1180,13 @@ elif page == "⚙️ Manage Students":
                 key="del_select",
             )
 
-            # Option: also wipe attendance history
             purge_att = st.checkbox(
                 "Also delete this student's attendance records",
                 value=True,
                 key="del_purge",
-                help="Removes all historical attendance rows for this student from the Excel file. "
-                     "Prevents phantom records inflating the present count after deletion.",
+                help="Removes all historical attendance rows for this student from the Excel file.",
             )
 
-            # Safety confirmation checkbox
             confirmed_del = st.checkbox(
                 f'I confirm I want to remove **{del_name}** from the system',
                 key="del_confirm",
