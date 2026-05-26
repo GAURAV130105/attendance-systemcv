@@ -1,0 +1,198 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Calibri;}}
+\fs24
+\b Smart Attendance System - Codebase Report\b0\par
+Generated: 2026-05-24 22:51:30 +05:30\par
+\par
+\b Overview\b0\par
+This codebase implements a computer vision attendance system. A Tkinter desktop app handles enrollment and live recognition. Attendance is stored in a single Excel workbook. A Streamlit dashboard reads the same workbook for analytics, exports, and admin actions. Face detection uses YOLOv8, and recognition uses OpenCV LBPH with vote smoothing for stability. Optional MediaPipe face mesh overlays are drawn for visual feedback.\par
+\par
+\b Tech Stack (and why it is used)\b0\par
+- Python 3.8+ as the application runtime.\par
+- OpenCV (opencv-contrib-python) for image processing and LBPH face recognition.\par
+- Ultralytics YOLOv8 for real-time face detection.\par
+- MediaPipe for optional face-landmarker mesh overlays.\par
+- NumPy for array and image math.\par
+- Pillow (PIL) for Tkinter image conversion.\par
+- OpenPyXL for Excel read/write and styling.\par
+- Matplotlib for generating the attendance popup chart.\par
+- Streamlit for the admin dashboard UI.\par
+- Pandas for attendance dataframes in the dashboard.\par
+- Plotly for interactive charts in the dashboard.\par
+- FPDF (scripts) for generating a PDF report.\par
+\par
+\b Architecture (high level)\b0\par
+1. Enrollment pipeline\par
+- FaceDetector locates a single face in a webcam frame.\par
+- FaceEncoder normalizes (CLAHE), augments images, and trains an LBPH model.\par
+- Label map and model files are persisted in encodings\\.\par
+\par
+2. Attendance pipeline\par
+- FaceDetector finds faces.\par
+- FaceRecognizer crops and normalizes faces, predicts LBPH labels, and vote-smooths across frames.\par
+- AttendanceLogger records unique daily marks to attendance_records\\attendance_records.xlsx.\par
+- Attendance popup shows the student history and a chart.\par
+\par
+3. Admin dashboard\par
+- Streamlit dashboard reads the same Excel workbook and label map.\par
+- Provides daily reports, student stats, exports, and data cleanup utilities.\par
+\par
+\b Data storage and artifacts\b0\par
+- known_faces\\ : Per-student directories with raw and augmented face images.\par
+- encodings\\ : LBPH model and label map pickle.\par
+- attendance_records\\attendance_records.xlsx : Master attendance workbook.\par
+- models\\ : YOLOv8 face model and MediaPipe face landmarker task file.\par
+\par
+\b Module and Function Explanations (simplified)\b0\par
+\par
+\b config.py\b0\par
+Purpose: Central configuration for paths, thresholds, camera index, performance flags, and UI colors.\par
+Key settings explain where files are stored (known_faces, encodings, attendance_records, models) and how strict recognition is (LBPH_THRESHOLD, MIN_ATTENDANCE_CONFIDENCE).\par
+\par
+\b attendance_logger.py\b0\par
+Purpose: Single source of truth for attendance persistence in Excel.\par
+Functions:\par
+- _thin_border: Returns a thin border style for Excel cells.\par
+- _header_style: Returns font, fill, and alignment used for header cells.\par
+- _data_style: Returns alignment and fill for data rows.\par
+Class AttendanceLogger:\par
+- __init__: Sets file paths, loads or creates the workbook, preloads today, starts autosave.\par
+- _create_new_workbook: Creates the workbook with styled header row.\par
+- date_str: Property that always returns today in YYYY-MM-DD.\par
+- _check_date_rollover: Resets cache if the date changes during runtime.\par
+- _load_todays_marks: Reads the workbook to rebuild today cache on startup.\par
+- mark_present: Adds a student to the in-memory cache if not already marked today.\par
+- is_already_marked: Checks if a student was already marked today.\par
+- get_present_list: Returns current-session present list from cache.\par
+- _flush_to_sheet: Writes cached records to the Excel sheet.\par
+- _autosave_loop: Background thread that periodically saves to disk.\par
+- get_summary: Returns total present and file path summary.\par
+- save: Flushes and saves the workbook immediately.\par
+- close: Flushes, saves, and stops autosave.\par
+Function get_student_history:\par
+- Reads the workbook and computes total, present, absent days and percentage for a student.\par
+\par
+\b face_detector.py\b0\par
+Purpose: YOLOv8-based face detection with auto model download.\par
+Class FaceDetector:\par
+- __init__: Ensures model exists and loads YOLO once.\par
+- _ensure_model: Downloads the YOLO model if missing.\par
+- detect: Returns face bounding boxes for a frame.\par
+- detect_with_confidence: Returns bounding boxes with confidence scores.\par
+\par
+\b face_encoder.py\b0\par
+Purpose: Enrollment and LBPH training pipeline with augmentation.\par
+Functions:\par
+- _sanitize_path_component: Cleans names for safe folder paths.\par
+- _augment_face: Generates augmented face crops (flip, brightness, contrast, gamma, blur).\par
+- _apply_gamma: Applies gamma correction to a grayscale image (inner helper).\par
+- enroll_from_gui: Detects a single face and returns a normalized 200x200 grayscale crop.\par
+- save_enrollment: Saves images, updates label map, retrains LBPH model.\par
+- _report: Inner helper to push status to the UI callback.\par
+- _train_lbph_model: Loads all face images, applies CLAHE, trains LBPH, saves model.\par
+- _load_label_map: Loads the label map pickle from disk.\par
+- _save_label_map: Saves the label map pickle to disk.\par
+- load_all_encodings: Returns the label map for recognition.\par
+- delete_student: Removes a student data folder and retrains or removes the model.\par
+- get_enrolled_students: Returns a list of enrolled student name and roll.\par
+\par
+\b face_recognizer.py\b0\par
+Purpose: Live recognition and overlay drawing.\par
+Class FaceRecognizer:\par
+- __init__: Loads detector, LBPH model, sets up vote buffers and lazy MediaPipe init.\par
+- reload_model: Reloads LBPH model and label map from disk.\par
+- _init_landmarker: Downloads and initializes MediaPipe face landmarker in background.\par
+- recognize_frame: Detects faces, runs LBPH prediction, and vote-smooths results.\par
+- _draw_corner_brackets: Draws futuristic corner brackets for a face box.\par
+- _draw_scan_line: Draws a scanning line animation across a face box.\par
+- _draw_confidence_bar: Draws a confidence bar above the face.\par
+- _draw_hud_label: Draws a label and confidence summary below the face.\par
+- _draw_face_mesh: Draws a face mesh overlay when enabled.\par
+- _draw_fps: Draws live FPS in the top-right corner.\par
+- draw_results: High-level helper to render all overlays for current recognition results.\par
+- num_enrolled: Returns how many students are enrolled (from label map).\par
+\par
+\b attendance_popup.py\b0\par
+Purpose: Visual popup showing student history after a successful mark.\par
+Functions:\par
+- show_attendance_popup: Spawns a background thread, computes stats, and opens popup.\par
+- _load_and_show: Inner helper that loads history and schedules UI creation.\par
+- _render_pie_chart: Renders a donut chart of present vs absent.\par
+- _create_popup: Builds the popup window layout and content.\par
+- _stat_row: Inner helper to add a labeled stat row.\par
+- _tick: Inner helper for countdown and auto-close.\par
+\par
+\b main.py\b0\par
+Purpose: Tkinter application entry point and UI control flow.\par
+Class AttendanceApp:\par
+- __init__: Initializes UI, camera state, worker threads, and auto-start logic.\par
+- _setup_styles: Defines dark theme styles for the UI.\par
+- _build_header: Builds the top bar and mode buttons.\par
+- _build_main_area: Builds camera view and side panel container.\par
+- _build_default_side_panel: Shows enrolled students and actions.\par
+- _build_enrollment_panel: Shows enrollment form and capture controls.\par
+- _build_attendance_panel: Shows attendance list and stop button.\par
+- _build_status_bar: Shows bottom status and enrolled count.\par
+- _cancel_feed_loop: Cancels any scheduled camera update callback.\par
+- _start_camera: Opens webcam and clears stale cached frames.\par
+- _start_worker: Starts the background worker thread for the chosen mode.\par
+- _stop_worker: Stops the worker thread cleanly.\par
+- _worker_attendance: Reads frames, runs recognition, and produces render results.\par
+- _worker_enroll: Reads frames and produces enrollment overlay results.\par
+- _frame_to_imgtk: Converts BGR frames to Tkinter PhotoImage.\par
+- _resize_with_aspect_ratio: Resizes images without distortion.\par
+- _stop_camera: Stops camera and resets UI state.\par
+- _update_camera_feed: Pulls worker results and updates the UI display.\par
+- _start_enrollment_mode: Switches UI into enrollment mode and starts capture loop.\par
+- _capture_enrollment_photo: Captures a frame, validates single face, stores it.\par
+- _update_enrollment_progress: Updates the capture counter and UI state.\par
+- _save_enrollment: Saves photos, triggers retrain, updates UI when done.\par
+- _progress: Inner helper for enrollment status messages.\par
+- _do_save: Inner helper to run save logic in a background thread.\par
+- _safe_set_enroll_status: Thread-safe status update for enrollment panel.\par
+- _on_enrollment_saved: Final UI updates after enrollment completes.\par
+- _start_attendance_mode: Switches UI into attendance mode and loads models.\par
+- _load_models: Inner helper to load recognizer and logger off the UI thread.\par
+- _on_models_loaded: Applies loaded models to the UI state.\par
+- _update_attendance_list: Refreshes the on-screen list of present students.\par
+- _stop_attendance: Stops attendance and saves records.\par
+- _refresh_student_list: Refreshes the enrolled students listbox.\par
+- _retrain_model: Manual retrain from the UI.\par
+- _do_retrain: Inner helper for background retraining.\par
+- _on_done: Inner helper to update UI after retrain completes.\par
+- _silent_retrain: Retrains in the background during auto-start.\par
+- _do: Inner helper for silent retraining.\par
+- _delete_selected_student: Deletes a student and updates UI.\par
+- _update_enrolled_count: Updates the status bar with enrolled total.\par
+- _set_status: Updates the status bar message.\par
+- _on_close: Graceful shutdown on window close.\par
+Function main:\par
+- Application entry point that creates the Tk window and starts the app.\par
+\par
+\b dashboard.py\b0\par
+Purpose: Streamlit admin dashboard for analytics and data management.\par
+Functions:\par
+- _delete_attendance_records: Deletes rows for a date and optional students.\par
+- _rename_student: Renames a student across label map, folders, and attendance file.\par
+- _san: Inner helper to sanitize folder names.\par
+- _delete_student_dashboard: Deletes a student and optionally purges attendance rows.\par
+- load_attendance_df: Loads the Excel workbook into a dataframe.\par
+- load_enrolled_students: Loads enrolled students from label map.\par
+- get_student_stats: Computes per-student attendance percentages.\par
+- pct_color: Chooses a color based on percentage thresholds.\par
+- _pct: Inner helper used in UI rendering for percent labels.\par
+\par
+\b scripts\\generate_pdf_report.py\b0\par
+Purpose: Utility to generate a PDF report from the codebase.\par
+Functions:\par
+- analyze_file: Parses a Python file to extract docstrings and symbols.\par
+- collect_py_files: Finds Python files while skipping data folders.\par
+- build_report: Creates a text report from parsed file info.\par
+- write_pdf: Writes the text report to PDF (FPDF).\par
+\par
+\b scripts\\test_imports.py\b0\par
+Purpose: Quick import and API smoke test.\par
+Behavior:\par
+- Imports major modules and prints OK or error.\par
+- Calls get_enrolled_students and load_all_encodings for a quick check.\par
+}
