@@ -1,0 +1,120 @@
+"""
+Configuration for the Attendance Management System.
+Uses YOLOv8-face detector + LBPH face recognizer (no dlib/C++ compilation needed).
+"""
+import os
+
+# Base directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Directory paths
+KNOWN_FACES_DIR = os.path.join(BASE_DIR, "known_faces")
+ENCODINGS_DIR   = os.path.join(BASE_DIR, "encodings")
+ATTENDANCE_DIR  = os.path.join(BASE_DIR, "attendance_records")
+MODELS_DIR      = os.path.join(BASE_DIR, "models")
+
+# Ensure directories exist
+for d in [KNOWN_FACES_DIR, ENCODINGS_DIR, ATTENDANCE_DIR, MODELS_DIR]:
+    os.makedirs(d, exist_ok=True)
+
+# ── YOLOv8-face detection settings ─────────────────────────────
+YOLO_CONFIDENCE_THRESHOLD = 0.50   # Minimum detection confidence
+YOLO_FACE_MODEL  = os.path.join(MODELS_DIR, "yolov8n-face.pt")
+YOLO_IMG_SIZE    = 320             # Inference resolution — smaller = faster on CPU
+YOLO_HALF        = False           # Half-precision (GPU only — keep False for CPU)
+
+# YOLO model download URL
+YOLO_MODEL_URL = (
+    "https://github.com/YapaLab/yolo-face/releases/download/1.0.0/yolov8n-face.pt"
+)
+
+# ── Face recognition settings (LBPH) ───────────────────────────
+# LBPH_THRESHOLD = maximum allowed distance for a face to be accepted.
+# Set to 80 so real matches under varied lighting pass, while still
+# being well below 90 which allowed ghost-marks.
+# The combined MIN_ATTENDANCE_CONFIDENCE gate (below) does the fine
+# filtering — blocking any match below 20% confidence.
+LBPH_THRESHOLD        = 80   # Lower = stricter (50-100 range for ≤20 students)
+NUM_ENROLLMENT_PHOTOS = 5    # Raw captures per student
+# Each raw capture is augmented to N training samples automatically
+# Raised from 12 → 20 to include gamma/contrast variants that improve
+# recognition across different lighting hours (morning vs. evening).
+AUGMENT_SAMPLES_PER_PHOTO = 20   # flip + brightness + gamma + contrast variants
+
+# ── Recognition voting (smooths per-frame jitter) ───────────────
+# A name is only "confirmed" once it wins VOTE_THRESHOLD fraction
+# of the last VOTE_FRAMES worker frames for that face position.
+#
+# VOTE_FRAMES=5  — ~0.3 s window at 15 fps (fast enough for real-time)
+# VOTE_THRESHOLD=0.65 — 65% = at least 4 of 5 frames must agree.
+#   Eliminates 1-frame jitter without slowing recognition.
+#
+# MIN_ATTENDANCE_CONFIDENCE — hard floor on the LBPH confidence score
+#   (0-1 scale, 1 = perfect match).  Faces with < 20% confidence are
+#   never marked present even if the vote agrees.
+#   With LBPH_THRESHOLD=80: blocks any match with distance > 64
+#   (the 9% ghost had distance ~73 — blocked; real matches score 30-80%).
+VOTE_FRAMES               = 5     # Rolling window size
+VOTE_THRESHOLD            = 0.65  # 65% agreement required
+MIN_ATTENDANCE_CONFIDENCE = 0.20  # Minimum LBPH confidence to mark present
+
+# ── Camera settings ────────────────────────────────────────────
+CAMERA_INDEX = 0   # Default webcam
+
+# ── File paths ─────────────────────────────────────────────────
+LBPH_MODEL_FILE  = os.path.join(ENCODINGS_DIR, "lbph_model.yml")
+LABEL_MAP_FILE   = os.path.join(ENCODINGS_DIR, "label_map.pkl")
+# Single master attendance workbook — all sessions in one file
+ATTENDANCE_FILE  = os.path.join(ATTENDANCE_DIR, "attendance_records.xlsx")
+
+# ── Performance / MediaPipe throttle ───────────────────────────
+# Run the heavy MediaPipe face-mesh overlay only every Nth worker frame.
+# Setting to 1 draws on every frame (slow); 10 gives a smooth ~3 fps mesh update.
+FACE_MESH_EVERY_N_FRAMES = 10
+
+# ── GUI settings ───────────────────────────────────────────────
+WINDOW_TITLE  = "Smart Attendance System"
+WINDOW_WIDTH  = 1200
+WINDOW_HEIGHT = 750
+
+SHOW_FPS_COUNTER = True   # Overlay live FPS on camera feed
+
+# ── Academic hierarchy ─────────────────────────────────────────────
+ACADEMIC_DATA_FILE = os.path.join(BASE_DIR, "academic_data.json")
+
+# ── Attendance status codes ────────────────────────────────────────
+ATTENDANCE_CODES = {
+    "P":  "Present",
+    "A":  "Absent",
+    "OD": "On Duty / Event",
+    "ML": "Medical Leave",
+}
+
+# Excel fill colours per status code (hex, no '#')
+CODE_FILL_COLORS = {
+    "P":  "C8E6C9",   # light green
+    "A":  "FFCDD2",   # light red/pink
+    "OD": "FFF9C4",   # light yellow
+    "ML": "E3F2FD",   # light blue
+    "":   "F5F5F5",   # gray (unset)
+}
+
+# Button/label colours per code for Tkinter GUI
+CODE_BUTTON_COLORS = {
+    "P":  "#1b5e20",   # dark green
+    "A":  "#b71c1c",   # dark red
+    "OD": "#e65100",   # deep orange
+    "ML": "#0d47a1",   # dark blue
+}
+
+# ── Colors (BGR for OpenCV, hex for tkinter) ───────────────────
+COLOR_RECOGNIZED_BGR = (0, 200, 0)
+COLOR_UNKNOWN_BGR    = (0, 0, 220)
+COLOR_RECOGNIZED_HEX = "#00C853"
+COLOR_UNKNOWN_HEX    = "#FF1744"
+BG_COLOR      = "#1a1a2e"
+FG_COLOR      = "#e0e0e0"
+ACCENT_COLOR  = "#0f3460"
+BUTTON_COLOR  = "#16213e"
+SUCCESS_COLOR = "#00C853"
+WARNING_COLOR = "#FF6D00"

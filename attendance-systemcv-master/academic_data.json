@@ -1,0 +1,368 @@
+{
+  "programs": {
+    "BCA": {
+      "semesters": {
+        "Semester 1": {
+          "sections": [
+            "A",
+            "B"
+          ],
+          "courses": [
+            "Computer Fundamentals",
+            "Mathematics I",
+            "English Communication",
+            "Programming in C",
+            "Digital Electronics"
+          ]
+        },
+        "Semester 2": {
+          "sections": [
+            "A",
+            "B"
+          ],
+          "courses": [
+            "Data Structures",
+            "Mathematics II",
+            "OOP with C++",
+            "Web Technologies",
+            "PC Hardware and Networking"
+          ]
+        },
+        "Semester 3": {
+          "sections": [
+            "A",
+            "B"
+          ],
+          "courses": [
+            "Database Management Systems",
+            "Operating Systems",
+            "JAVA Programming",
+            "Computer Networks",
+            "Software Engineering"
+          ]
+        },
+        "Semester 4": {
+          "sections": [
+            "A",
+            "B"
+          ],
+          "courses": [
+            "Advanced Java",
+            "System Analysis and Design",
+            "Computer Graphics",
+            "Python Programming",
+            "DBMS Lab"
+          ]
+        },
+        "Semester 5": {
+          "sections": [
+            "A"
+          ],
+          "courses": [
+            "Machine Learning",
+            "Cloud Computing",
+            "Mobile Computing",
+            "Cyber Security",
+            "Elective I"
+          ]
+        },
+        "Semester 6": {
+          "sections": [
+            "A"
+          ],
+          "courses": [
+            "Project Work",
+            "Entrepreneurship",
+            "Artificial Intelligence",
+            "Elective II",
+            "Internship"
+          ]
+        }
+      }
+    },
+    "MCA": {
+      "semesters": {
+        "Semester 1": {
+          "sections": [
+            "A"
+          ],
+          "courses": [
+            "Discrete Mathematics",
+            "Computer Organization",
+            "Programming with Python",
+            "Data Structures and Algorithms",
+            "Technical Writing"
+          ]
+        },
+        "Semester 2": {
+          "sections": [
+            "A"
+          ],
+          "courses": [
+            "Design and Analysis of Algorithms",
+            "Database Management Systems",
+            "Advanced OOP",
+            "Computer Networks",
+            "Probability and Statistics"
+          ]
+        },
+        "Semester 3": {
+          "sections": [
+            "A"
+          ],
+          "courses": [
+            "Software Engineering",
+            "Machine Learning",
+            "Operating Systems",
+            "Distributed Systems",
+            "Web Services and API"
+          ]
+        },
+        "Semester 4": {
+          "sections": [
+            "A"
+          ],
+          "courses": [
+            "Project",
+            "Internship",
+            "Research Methodology",
+            "Cloud Computing",
+            "Elective"
+          ]
+        }
+      }
+    },
+    "B.Tech CSE": {
+      "semesters": {
+        "Semester 1": {
+          "sections": [
+            "A",
+            "B",
+            "C"
+          ],
+          "courses": [
+            "Engineering Mathematics I",
+            "Engineering Physics",
+            "Engineering Chemistry",
+            "Basic Electronics",
+            "Programming in C"
+          ]
+        },
+        "Semester 2": {
+          "sections": [
+            "A",
+            "B",
+            "C"
+          ],
+          "courses": [
+            "Engineering Mathematics II",
+            "Engineering Mechanics",
+            "Electrical Engineering",
+            "Data Structures",
+            "OOP with Java"
+          ]
+        },
+        "Semester 3": {
+          "sections": [
+            "A",
+            "B",
+            "C"
+          ],
+          "courses": [
+            "Discrete Mathematics",
+            "Digital Logic Design",
+            "Database Management",
+            "Computer Architecture",
+            "OOP with C++"
+          ]
+        },
+        "Semester 4": {
+          "sections": [
+            "A",
+            "B",
+            "C"
+          ],
+          "courses": [
+            "Operating Systems",
+            "Computer Networks",
+            "Theory of Computation",
+            "Microprocessors",
+            "Software Engineering"
+          ]
+        },
+        "Semester 5": {
+          "sections": [
+            "A",
+            "B"
+          ],
+          "courses": [
+            "Compiler Design",
+            "Artificial Intelligence",
+            "Machine Learning",
+            "Web Technologies",
+            "Elective I"
+          ]
+        },
+        "Semester 6": {
+          "sections": [
+            "A",
+            "B"
+          ],
+          "courses": [
+            "Cloud Computing",
+            "Information Security",
+            "Big Data Analytics",
+            "Mobile Computing",
+            "Elective II"
+          ]
+        },
+        "Semester 7": {
+          "sections": [
+            "A"
+          ],
+          "courses": [
+            "Project Phase I",
+            "Advanced Machine Learning",
+            "Internet of Things",
+            "Elective III",
+            "Industrial Training"
+          ]
+        },
+        "Semester 8": {
+          "sections": [
+            "A"
+          ],
+          "courses": [
+            "Project Phase II",
+            "Entrepreneurship",
+            "Research Project",
+            "Elective IV"
+          ]
+        }
+      }
+    }
+  },
+  "students": {
+    "BCA|Semester 1|A": [
+      {
+        "roll_no": "101",
+        "enrollment_no": "ENR001",
+        "name": "Alice Johnson"
+      },
+      {
+        "roll_no": "102",
+        "enrollment_no": "ENR002",
+        "name": "Bob Smith"
+      },
+      {
+        "roll_no": "103",
+        "enrollment_no": "ENR003",
+        "name": "Charlie Brown"
+      }
+    ]
+  },
+  "events": [
+    {
+      "name": "Code Champ Competition",
+      "type": "Technical",
+      "date": "2026-09-15"
+    },
+    {
+      "name": "Tech Hackathon",
+      "type": "Technical",
+      "date": "2026-09-15"
+    },
+    {
+      "name": "Annual Sports Meet",
+      "type": "Sports",
+      "date": "2026-09-15"
+    },
+    {
+      "name": "Cultural Fest",
+      "type": "Cultural",
+      "date": "2026-09-15"
+    },
+    {
+      "name": "AI & Robotics Workshop",
+      "type": "Workshop",
+      "date": "2026-09-15"
+    },
+    {
+      "name": "Inter-College Symposium",
+      "type": "Academic",
+      "date": "2026-09-15"
+    }
+  ],
+  "event_records": [
+    {
+      "event_name": "Code Champ Competition",
+      "roll_no": "454",
+      "student_name": "Gaurav Singh",
+      "date": "2026-09-15",
+      "time": "12:57:11",
+      "status": "OD",
+      "engagement": "Approved Participation",
+      "remarks": "Approved Event Participation"
+    },
+    {
+      "event_name": "Code Champ Competition",
+      "roll_no": "101",
+      "student_name": "Alice Johnson",
+      "date": "2026-09-15",
+      "time": "12:58:55",
+      "status": "OD",
+      "engagement": "Approved Participation",
+      "remarks": "Approved Event Participation"
+    },
+    {
+      "event_name": "Code Champ Competition",
+      "roll_no": "14",
+      "student_name": "gaurav singh",
+      "date": "2026-09-15",
+      "time": "13:00:02",
+      "status": "OD",
+      "engagement": "Approved Participation",
+      "remarks": "Approved Event Participation"
+    },
+    {
+      "event_name": "Cultural Fest",
+      "roll_no": "14",
+      "student_name": "gaurav singh",
+      "date": "2026-09-15",
+      "time": "13:00:16",
+      "status": "OD",
+      "engagement": "Approved Participation",
+      "remarks": "Approved Event Participation"
+    },
+    {
+      "event_name": "Cultural Fest",
+      "roll_no": "454",
+      "student_name": "Gaurav Singh",
+      "date": "2026-09-15",
+      "time": "13:00:19",
+      "status": "OD",
+      "engagement": "Approved Participation",
+      "remarks": "Approved Event Participation"
+    },
+    {
+      "event_name": "Code Champ Competition",
+      "roll_no": "102",
+      "student_name": "Bob Smith",
+      "date": "2026-09-15",
+      "time": "14:21:17",
+      "status": "OD",
+      "engagement": "Approved Participation",
+      "remarks": "Approved Event Participation"
+    },
+    {
+      "event_name": "Code Champ Competition",
+      "roll_no": "12",
+      "student_name": "gaurav singh",
+      "date": "2026-09-15",
+      "time": "14:30:52",
+      "status": "OD",
+      "engagement": "Approved Participation",
+      "remarks": "Approved Event Participation"
+    }
+  ]
+}
